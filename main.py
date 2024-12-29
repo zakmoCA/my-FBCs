@@ -1,5 +1,6 @@
 import re
 from collections import defaultdict
+from statistics import mean
 
 
 def parse_results(file_path):
@@ -39,7 +40,10 @@ def extract_relevant_data(section):
         match = re.match(r"([\w\s/]+)\s+([\d.-]+.*\w+/?.*)", line)
         if match:
             test_name, value_unit = match.groups()
-            relevant_data.append(f"{test_name.strip():30} | {value_unit.strip()}")
+            relevant_data.append(
+                f"{test_name.strip():30} | {
+                                 value_unit.strip()}"
+            )
 
     return "\n".join(relevant_data)
 
@@ -54,11 +58,35 @@ def display_results(results):
         print("-" * 80)
 
 
+
+# ⬇️ will average the last 3 fbc test results to establish a personalised baseline (setpoint)
+def calculate_fbc_setpoint(fbc_results):
+# pass it a list of dicts, each containing test name and val pairs for given measurement date eg:
+    #     fbc_results = [
+    #     {"WBC": 7.1, "Hemoglobin": 13.4, "Platelets": 250},
+    #     {"WBC": 6.8, "Hemoglobin": 13.1, "Platelets": 260},
+    #     {"WBC": 7.3, "Hemoglobin": 13.5, "Platelets": 255},
+    # ]
+
+    setpoints = {}
+    for test_name in fbc_results[0]:
+        try:
+            values = [
+                result[test_name] for result in fbc_results if test_name in result
+            ]
+            setpoints[test_name] = round(mean(values[:3]), 2)  # last 3 vals
+        except Exception as e:
+            setpoints[test_name] = f"error: {e}"
+    return setpoints
+
+
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Process a medical report .txt file.")
-    parser.add_argument("--file", "-f", type=str, required=True, help="path to the results txt file")
+    parser.add_argument(
+        "--file", "-f", type=str, required=True, help="path to the results txt file"
+    )
     args = parser.parse_args()
 
     parsed_results = parse_results(args.file)
